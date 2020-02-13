@@ -19,14 +19,14 @@ router.get("/:code", async (req, res, next) => {
 			`SELECT code, name, description 
       FROM companies
       WHERE code = $1`,
-			[ code ]
+			[code]
 		);
 
 		if (company.rows.length === 0) {
 			throw new ExpressError("This company does not exist.", 400);
 		}
 		return res.json({ company: company.rows[0] });
-	} 
+	}
 	catch (err) {
 		return next(err);
 	}
@@ -36,7 +36,7 @@ router.post("/", async (req, res, next) => {
 	try {
 		let { code, name, description } = req.body;
 		console.log("CODE!!!>>>>", code)
-		if(!code || !name){
+		if (!code || !name) {
 			throw new ExpressError("You need a code & name", 400)
 		} else {
 			const result = await db.query(`
@@ -45,9 +45,9 @@ router.post("/", async (req, res, next) => {
 			RETURNING code, name, description
 			`, [code, name, description])
 			return res.status(201)
-			.json(result.rows[0]);
+				.json(result.rows[0]);
 		}
-	} 
+	}
 	catch (err) {
 		return next(err);
 	}
@@ -57,7 +57,7 @@ router.put("/:code", async (req, res, next) => {
 	try {
 		let code = req.params.code;
 		let { name, description } = req.body;
-		if(!name || !description){
+		if (!name || !description) {
 			throw new ExpressError("Please provide update for name and description", 400)
 		} else {
 			let result = await db.query(`
@@ -66,7 +66,7 @@ router.put("/:code", async (req, res, next) => {
 			WHERE code = $1
 			RETURNING code, name, description
 			`, [code, name, description])
-			return res.json({company: result.rows[0]})
+			return res.json({ company: result.rows[0] })
 		}
 	} catch (err) {
 		return next(err);
@@ -80,7 +80,7 @@ router.delete("/:code", async (req, res, next) => {
 			DELETE FROM companies
 			WHERE code = $1
 		`, [code])
-		return res.json({message: "deleted"})
+		return res.json({ message: "deleted" })
 	} catch (err) {
 		return next(err);
 	}
