@@ -21,8 +21,8 @@ router.get("/:id", checkValidInvoice, async (req, res, next) => {
 
   let { id, comp_code, amt, paid, add_date, paid_date, code, name, description } = invoice.rows[0];
 
-  return res.json({ id, comp_code, amt, paid, add_date, paid_date,
-                    company: { code, name, description } });
+  return res.json({invoice: { id, comp_code, amt, paid, add_date, paid_date,
+                    company: { code, name, description } }});
 });
 
 router.post("/", invoiceCheckComp, async (req, res, next) => {
