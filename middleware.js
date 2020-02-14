@@ -34,4 +34,20 @@ async function checkValidInvoice(req, res, next) {
   }
 }
 
-module.exports = { checkValidCompany, checkValidInvoice };
+async function invoiceCheckComp(req, res, next) {
+  try {
+    const checkRes = await db.query(
+        `SELECT code FROM companies WHERE code = $1`,
+        [req.body.comp_code]);
+
+    if (checkRes.rows.length === 0) {
+      throw new ExpressError("Please add company before adding invoice", 404);
+    }
+  return next();
+  }
+  catch (err) {
+    return next(err);
+  }
+}
+
+module.exports = { checkValidCompany, checkValidInvoice, invoiceCheckComp };

@@ -2,7 +2,7 @@ const express = require("express");
 const router = new express.Router();
 const ExpressError = require("../expressError");
 const db = require("../db");
-const { checkValidInvoice } = require("../middleware");
+const { checkValidInvoice, invoiceCheckComp } = require("../middleware");
 
 router.get("/", async (req, res, next) => {
   let invoices = await db.query(
@@ -12,59 +12,55 @@ router.get("/", async (req, res, next) => {
 });
 
 router.get("/:id", checkValidInvoice, async (req, res, next) => {
-  let id = req.params.id;
+  let invoiceId = req.params.id;
   let invoice = await db.query(
-    `SELECT id, comp_code, amt, paid, add_date, paid_date
-     FROM invoices
-     WHERE id = $1`,
-    [id]
-  );
-  let comp_code = invoice.rows[0].comp_code
-  let company = await db.query(
-    `SELECT code, name, description
-     FROM companies
-     WHERE code = $1`,
-    [comp_code]
-  );
-  return res.json({ ...invoice.rows[0], company: company.rows[0] });
+    `SELECT * FROM invoices
+     JOIN companies
+     ON invoices.comp_code = companies.code
+     WHERE id = $1`, [invoiceId]);
+
+  let { id, comp_code, amt, paid, add_date, paid_date, code, name, description } = invoice.rows[0];
+
+  return res.json({ id, comp_code, amt, paid, add_date, paid_date,
+                    company: { code, name, description } });
 });
 
-router.post("/", async (req, res, next) => {
+router.post("/", invoiceCheckComp, async (req, res, next) => {
   try {
     let { comp_code, amt } = req.body;
     if (!comp_code || !amt) {
-      throw new ExpressError("You need a code & name", 400);
+      throw new ExpressError("Please provide company code and invoice amount", 400);
     }
     const result = await db.query(
-      `INSERT INTO companies (code, name, description)
-			 VALUES ($1, $2, $3)
-			 RETURNING code, name, description`,
-      [code, name, description]);
+      `INSERT INTO invoices (comp_code, amt)
+			 VALUES ($1, $2)
+			 RETURNING id, comp_code, amt, paid, add_date, paid_date`,
+      [comp_code, amt]);
 
-    return res.status(201).json(result.rows[0]);
+    return res.status(201).json({invoice: result.rows[0]});
   }
   catch (err) {
     return next(err);
   }
 });
 
-router.put("/:code", checkValidInvoice, async (req, res, next) => {
+router.put("/:id", checkValidInvoice, async (req, res, next) => {
   try {
-    let code = req.params.code;
-    let { name, description } = req.body;
+    let invoiceId = req.params.id;
+    let amt = req.body.amt;
 
-    if (!name || !description) {
-      throw new ExpressError("Please provide update for name and description", 400);
+    if (!amt) {
+      throw new ExpressError("Please provide an updated amount", 400);
 
     } else {
       let result = await db.query(
-        `UPDATE companies
-				 SET name = $2, description = $3
-				 WHERE code = $1
-				 RETURNING code, name, description`,
-        [code, name, description]);
+        `UPDATE invoices
+				 SET amt = $1
+				 WHERE id = $2
+				 RETURNING id, comp_code, amt, paid, add_date, paid_date`,
+        [amt, invoiceId]);
 
-      return res.json({ company: result.rows[0] })
+      return res.json({ invoice: result.rows[0] })
     }
   }
   catch (err) {
@@ -72,12 +68,12 @@ router.put("/:code", checkValidInvoice, async (req, res, next) => {
   }
 });
 
-router.delete("/:code", checkValidInvoice, async (req, res) => {
-  let code = req.params.code;
+router.delete("/:id", checkValidInvoice, async (req, res) => {
+  let id = req.params.id;
   await db.query(
-    `DELETE FROM companies
-			 WHERE code = $1`,
-    [code]);
+    `DELETE FROM invoices
+			 WHERE id = $1`,
+    [id]);
   return res.json({ message: "deleted" });
 });
 

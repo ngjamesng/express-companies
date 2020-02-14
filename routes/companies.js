@@ -12,20 +12,20 @@ router.get("/", async (req, res, next) => {
 });
 
 router.get("/:code", checkValidCompany, async (req, res, next) => {
-	let code = req.params.code;
-	let company = await db.query(
-		`SELECT code, name, description
-     FROM companies
-     WHERE code = $1`,
-		[code]
-	);
-	let invoices = await db.query(
-		`SELECT id, comp_code, amt, paid, add_date, paid_date
-		 FROM invoices
-		 WHERE comp_code = $1`,
-		[code]
-	);
-	return res.json({ ...company.rows[0], invoices: invoices.rows });
+	let companyCode = req.params.code;
+	let results = await db.query(
+		`SELECT * FROM companies
+	JOIN invoices
+	ON companies.code = invoices.comp_code
+	WHERE code = $1`, [companyCode])
+
+	let { code, name, description } = results.rows[0];
+
+	let invoices = results.rows.map(r => {
+		return { id, comp_code, amt, paid, add_date, paid_date } = r;
+	});
+
+	return res.json({ code, name, description, invoices });
 });
 
 router.post("/", async (req, res, next) => {
